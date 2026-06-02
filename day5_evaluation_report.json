@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-06-03T04:30:43.697762",
+  "total_tests": 5,
+  "overall_score": 1.0,
+  "passed": 5,
+  "failed": 0,
+  "results": [
+    {
+      "test_name": "RFI_Classification_Accuracy",
+      "score": 1.0,
+      "details": {
+        "priority_correct": true,
+        "trade_correct": true,
+        "predicted_priority": "urgent",
+        "predicted_trade": "structural",
+        "score": 1.0
+      }
+    },
+    {
+      "test_name": "RFI_Routing_Correctness",
+      "score": 1.0,
+      "details": {
+        "priority_correct": true,
+        "trade_correct": true,
+        "predicted_priority": "normal",
+        "predicted_trade": "mep",
+        "score": 1.0
+      }
+    },
+    {
+      "test_name": "RFI_Response_Completeness",
+      "score": 1.0,
+      "details": {
+        "found_elements": [
+          "design intent",
+          "specification",
+          "replacement",
+          "cost"
+        ],
+        "missing_elements": [],
+        "response": "**Response to RFI: Window Glass Specification**\n\n**Project:** [Project Name]\n**RFI Number:** [RFI Number]\n**Date:** [Current Date]\n\nDear [Requester's Name],\n\nRe: Window Glass Specification - Low-E Gla...",
+        "score": 1.0
+      }
+    },
+    {
+      "test_name": "RFI_Code_Citation",
+      "score": 1.0,
+      "details": {
+        "found_codes": [
+          "ACI",
+          "318",
+          "specification"
+        ],
+        "missing_codes": [],
+        "response": "RFI Response:\n\nThe required concrete strength for the foundation footings is specified as 3,000 pounds per square inch (psi) with a minimum compressive strength of 3,500 psi at 28 days, as per the pro...",
+        "score": 1.0
+      }
+    },
+    {
+      "test_name": "RFI_Action_Items",
+      "score": 1.0,
+      "details": {
+        "found_actions": [
+          "revise",
+          "notify",
+          "verify",
+          "confirm"
+        ],
+        "missing_actions": [],
+        "response": "RFI Response: \n\nThe discrepancy between the drawings and specifications for the foundation footings has been noted. To address this issue, the following action items will be taken:\n\n1. **Revise drawin...",
+        "score": 1.0
+      }
+    }
+  ]
+}
