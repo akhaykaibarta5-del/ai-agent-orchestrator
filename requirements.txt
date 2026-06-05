@@ -1,1 +1,8 @@
-gradio
+groq 
+python-dotenv 
+langgraph 
+langchain-core 
+chromadb 
+fastapi 
+uvicorn 
+pydantic 
