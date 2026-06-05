@@ -1,8 +1,8 @@
-groq 
-python-dotenv 
-langgraph 
-langchain-core 
-chromadb 
-fastapi 
-uvicorn 
-pydantic 
+groq
+python-dotenv
+fastapi
+uvicorn
+pydantic
+prometheus-client
+psutil
+requests
