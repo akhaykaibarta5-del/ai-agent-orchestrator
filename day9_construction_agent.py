@@ -6,7 +6,10 @@ import re
 import os
 import json
 import math
+import smtplib
 import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from groq import Groq
 from dotenv import load_dotenv
@@ -70,32 +73,77 @@ def calculator(expression: str) -> str:
             "source": "calculator"
         })
 
-# ============ TOOL 3: EMAIL NOTIFICATION ============
+# ============ TOOL 3: EMAIL NOTIFICATION (REAL SMTP) ============
 def send_notification(to: str, subject: str, body: str) -> str:
-    """Send project notification (logs for demo)"""
+    """Send real email via Gmail SMTP"""
     try:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        notification = {
-            "to": to,
-            "subject": subject,
-            "body_preview": body[:150] + "..." if len(body) > 150 else body,
-            "status": "queued",
-            "timestamp": timestamp,
-            "source": "notification"
-        }
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        smtp_username = os.getenv("SMTP_USERNAME")
+        smtp_password = os.getenv("SMTP_PASSWORD")
         
-        with open("notifications_log.jsonl", "a") as f:
-            f.write(json.dumps(notification) + "\n")
+        if not smtp_username or not smtp_password:
+            print("⚠️ No SMTP configured, falling back to log only")
+            return _log_notification(to, subject, body)
+        
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username
+        msg['To'] = to
+        msg['Subject'] = subject
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        print(f"📧 Connecting to {smtp_server}:{smtp_port}...")
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        print(f"📧 Logging in as {smtp_username}...")
+        server.login(smtp_username, smtp_password)
+        
+        print(f"📧 Sending email to {to}...")
+        server.sendmail(smtp_username, to, msg.as_string())
+        server.quit()
+        
+        print(f"✅ Email sent successfully to {to}")
+        
+        _log_notification(to, subject, body, status="sent_via_email")
         
         return json.dumps({
             "status": "success",
-            "message": f"Notification queued for {to}",
+            "message": f"Email sent to {to}",
             "subject": subject,
-            "timestamp": timestamp,
-            "source": "notification"
+            "timestamp": datetime.now().isoformat(),
+            "source": "notification",
+            "method": "smtp"
         })
+        
     except Exception as e:
-        return json.dumps({"error": str(e), "status": "failed", "source": "notification"})
+        print(f"❌ Email failed: {str(e)}")
+        print(f"⚠️ Falling back to log only")
+        return _log_notification(to, subject, body, error=str(e))
+
+def _log_notification(to: str, subject: str, body: str, status="logged", error=None) -> str:
+    """Log notification to file as fallback"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    notification = {
+        "to": to,
+        "subject": subject,
+        "body_preview": body[:150] + "..." if len(body) > 150 else body,
+        "status": status,
+        "timestamp": timestamp,
+        "error": error,
+        "source": "notification"
+    }
+    
+    with open("notifications_log.jsonl", "a") as f:
+        f.write(json.dumps(notification) + "\n")
+    
+    return json.dumps({
+        "status": status,
+        "message": f"Notification logged for {to}" + (f" (Error: {error})" if error else ""),
+        "subject": subject,
+        "timestamp": timestamp,
+        "source": "notification"
+    })
 
 # ============ TOOL 4: PRICE LOOKUP (LLM Knowledge) ============
 def get_market_price(item: str, location: str = "India") -> str:
@@ -275,12 +323,13 @@ Respond ONLY in this JSON format (no other text):
         calc_expression = analysis.get("calculation_expression", "")
         print(f"🔍 DEBUG: Original calc expression: '{calc_expression}'")
         
+        # FIX: Initialize variables before the if block
+        variables = []
+        
         # If price was looked up, inject it into calculation
         if extracted_price and calc_expression:
-            # Detect variables (words that aren't numbers or math functions)
             math_functions = {'sqrt', 'pow', 'abs', 'round', 'max', 'min', 'sum', 'pi'}
             
-            # Split by operators and check each part
             operators = r'[\+\-\*/\(\)\,\.\*\*]'
             parts = re.split(operators, calc_expression)
             variables = []
@@ -291,7 +340,6 @@ Respond ONLY in this JSON format (no other text):
             
             print(f"🔍 DEBUG: Detected variables: {variables}")
             
-            # Replace all variables with extracted price
             if variables:
                 for var in variables:
                     calc_expression = re.sub(r'\b' + re.escape(var) + r'\b', str(extracted_price), calc_expression)
@@ -309,9 +357,15 @@ Respond ONLY in this JSON format (no other text):
         # Step 3: Generate final answer
         print("📝 Generating final answer...")
         
-        # Build context with all tool results
+        price_context = ""
+        if extracted_price:
+            price_context = f"\nExtracted Price from Search: ₹{extracted_price:,.2f} per cubic meter"
+        elif variables and not extracted_price:
+            price_context = f"\nNote: Used approximate market price of ₹4,500 per cubic meter (search results were unclear)"
+        
         context = f"""Tool Results:
 {json.dumps(tool_results, indent=2)}
+{price_context}
 
 Original Request: {user_input}"""
 
@@ -399,17 +453,17 @@ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 if __name__ == "__main__":
     print("🏗️ Construction Research & Notification Agent")
     print("=" * 60)
-    print("LLM Price Lookup | Web Search for Codes | Calculator | Notifications")
+    print("LLM Price Lookup | Web Search for Codes | Calculator | Real Email Notifications")
     print("=" * 60)
     
     agent = ConstructionAgent()
     
-    # Demo 1: Price Lookup + Calculate + Notify
+    # Demo 1: Price Lookup + Calculate + Send REAL Email
     print("\n📋 DEMO 1: Foundation Cost Estimate")
     print("-" * 50)
     result = agent.process(
         "What is the current price of M25 concrete per cubic meter in India? Calculate cost for 50 cubic meters.",
-        notify_email="project.manager@example.com"
+        notify_email="akhaykaibarta5@gmail.com"
     )
     
     print(f"\n📊 Answer Preview:\n{result['answer'][:400]}...")
